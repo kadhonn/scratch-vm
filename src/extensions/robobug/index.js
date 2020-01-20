@@ -36,13 +36,49 @@ class RobobugBlocks {
                     })
                 },
                 {
+                    opcode: 'powerOn',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'robobug.powerOn',
+                        default: 'power on',
+                        description: 'tell the robobug to power on'
+                    })
+                },
+                {
+                    opcode: 'powerOff',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'robobug.powerOff',
+                        default: 'power off',
+                        description: 'tell the robobug to power off'
+                    })
+                },
+                {
                     opcode: 'sound',
                     blockType: BlockType.COMMAND,
                     text: formatMessage({
                         id: 'robobug.sound',
-                        default: 'play a sound',
+                        default: 'play a sound. duration: [DURATION] frequency: [FREQUENCY]',
                         description: 'play a sound'
-                    })
+                    }),
+                    arguments: {
+                        DURATION: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.sound.duration',
+                                default: '10',
+                                description: 'duration in ms, from 0 to 255'
+                            })
+                        },
+                        FREQUENCY: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.sound.frequency',
+                                default: '1200',
+                                description: 'frquency of tone, from 0 to 2550'
+                            })
+                        }
+                    }
                 },
                 {
                     opcode: 'bodyHeight',
@@ -58,7 +94,61 @@ class RobobugBlocks {
                             defaultValue: formatMessage({
                                 id: 'robobug.bodyHeight.height',
                                 default: '60',
-                                description: 'height, from 0 to 255'
+                                description: 'height, from 0 to 100'
+                            })
+                        }
+                    }
+                },
+                {
+                    opcode: 'speed',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'robobug.speed',
+                        default: 'speed: [SPEED]',
+                        description: 'change the speed of the robobug, from 0 to 100'
+                    }),
+                    arguments: {
+                        SPEED: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.speed.speed',
+                                default: '50',
+                                description: 'speed, from 0 to 100'
+                            })
+                        }
+                    }
+                },
+                {
+                    opcode: 'walk',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'robobug.walk',
+                        default: 'walk forward: [FORWARD] sideward: [SIDE] turn:[TURN]',
+                        description: 'tell the robobug to walk forward'
+                    }),
+                    arguments: {
+                        FORWARD: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.walk.forward',
+                                default: '0',
+                                description: 'forward or backward speed, from -100 to 100'
+                            })
+                        },
+                        SIDE: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.walk.side',
+                                default: '0',
+                                description: 'left or right speed, from -100 to 100'
+                            })
+                        },
+                        TURN: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: formatMessage({
+                                id: 'robobug.walk.turn',
+                                default: '0',
+                                description: 'turn left or right while walking, from -100 to 100'
                             })
                         }
                     }
@@ -109,24 +199,6 @@ class RobobugBlocks {
                     })
                 },
                 {
-                    opcode: 'powerOn',
-                    blockType: BlockType.COMMAND,
-                    text: formatMessage({
-                        id: 'robobug.powerOn',
-                        default: 'power on',
-                        description: 'tell the robobug to power on'
-                    })
-                },
-                {
-                    opcode: 'powerOff',
-                    blockType: BlockType.COMMAND,
-                    text: formatMessage({
-                        id: 'robobug.powerOff',
-                        default: 'power off',
-                        description: 'tell the robobug to power off'
-                    })
-                },
-                {
                     opcode: 'akkuCharge',
                     blockType: BlockType.REPORTER,
                     text: formatMessage({
@@ -157,8 +229,7 @@ class RobobugBlocks {
                 console.log(err);
                 console.log(resp);
                 console.log(body);
-                console.log(body.toString());
-                if (resolveValue) {
+                if (resolveValue && !!body) {
                     resolve(body.toString());
                 } else {
                     resolve();
@@ -167,12 +238,23 @@ class RobobugBlocks {
         });
     }
 
+    _parseArg(value, min, max, defaultValue) {
+        value = parseInt(value);
+        if (isNaN(value)) {
+            value = defaultValue;
+        }
+        value = Math.max(Math.min(value, max), min);
+        return value
+    }
+
     reset() {
         return this._command("reset");
     }
 
-    sound() {
-        return this._command("sound");
+    sound(args) {
+        let duration = this._parseArg(args.DURATION, 0, 255, 10);
+        let frequency = this._parseArg(args.FREQUENCY, 0, 2550, 1200);
+        return this._command("sound?duration=" + duration + "&frequency=" + frequency);
     }
 
     walkForward() {
@@ -196,12 +278,7 @@ class RobobugBlocks {
     }
 
     bodyHeight(args) {
-        let height = args.HEIGHT;
-        height = parseInt(height);
-        if (isNaN(height)) {
-            height = 128;
-        }
-        height = Math.max(Math.min(height, 255), 0);
+        let height = this._parseArg(args.HEIGHT, 0, 100, 60);
         return this._command("body_height?height=" + height);
     }
 
@@ -215,6 +292,18 @@ class RobobugBlocks {
 
     akkuCharge() {
         return this._reporter("akku_charge");
+    }
+
+    speed(args) {
+        let speed = this._parseArg(args.SPEED, 0, 100, 50);
+        return this._command("speed?speed=" + speed);
+    }
+
+    walk(args) {
+        let forward = this._parseArg(args.FORWARD, -100, 100, 0);
+        let side = this._parseArg(args.SIDE, -100, 100, 0);
+        let turn = this._parseArg(args.TURN, -100, 100, 0);
+        return this._command("walk?forward=" + forward + "&side=" + side + "&turn=" + turn);
     }
 }
 

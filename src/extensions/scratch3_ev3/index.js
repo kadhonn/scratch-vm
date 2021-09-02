@@ -126,7 +126,7 @@ const Ev3Device = {
  */
 const Ev3Mode = {
     touch: 0, // touch
-    color: 1, // ambient
+    color: 0, // ambient
     ultrasonic: 1, // inch
     none: 0
 };
